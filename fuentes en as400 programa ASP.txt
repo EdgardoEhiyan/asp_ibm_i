@@ -1,0 +1,1222 @@
+Estos son los fuentes que deben estar en los iseries y tambien los querys
+
+Importante: Correr los clp PMEDTAM1 Y PMEDTAM2, comentando la ultima linea en ambos clp (la del call a los clp : corrida1 y corrida2, solo la primera vez que se ejecutan)
+esto se hace para poder luego crear los querys que trabajan con la salidad de esos programas
+Luego de que ambos corrieron crear los querys y volver a recompilar los PMEDTAM1 Y PMEDTAM2, eliminando el comentario y dejando la sentencia como estaba .
+
+
+
+CLPs:
+
+PMEDTAM1:
+
+/*****************************************************************/                                   
+/*   SACA LISTA DE ARCHIVOS MAYORES A 10 GIGABYTES               */                                   
+/*                                                               */                                   
+/*****************************************************************/                                   
+ PGM                                                                                                  
+ DCL VAR(&CMD) TYPE(*CHAR) LEN(1024)                                                                  
+ DCL VAR(&CMD5) TYPE(*CHAR) LEN(512)                                                                  
+             DLTF       FILE(ISYSMODOBJ/MEDTAMF)                                                      
+             MONMSG     MSGID(CPF2105)                                                                
+ CHGVAR     VAR(&CMD) VALUE('DB2 "CREATE TABLE ISYSMODOBJ.MEDTAMF AS +                                
+                          (SELECT SYSTEM_TABLE_SCHEMA, +                                              
+                          SYSTEM_TABLE_NAME, NUMBER_ROWS, +                                           
+                          NUMBER_DELETED_ROWS, LAST_SAVE_TIMESTAMP, +                                 
+                          ((DATA_SIZE)/1024/1024/1024) AS +                                           
+                          DATA_SIZE_GB FROM QSYS2.SYSTABLESTAT +                                      
+                          WHERE ((DATA_SIZE)/1024/1024/1024) >10) WITH DATA " ')                      
+       QSH CMD(&CMD)                                                                                  
+             MONMSG     MSGID(QSH0005 QSH0006 QSH0007 QSH0002)                                        
+     /*                PONE  UN UPDATE AL CAMPO LAST_SAVE_TIMESTAMP Y LE PONE LA FECHA DEL DIA */     
+     /*                                                                   
+     CHGVAR     VAR(&CMD5) VALUE('DB2 "UPDATE +                           
+                  ISYSMODOBJ.MEDTAMF SET  +                               
+                  LAST_SAVE_TIMESTAMP = (CURRENT TIMESTAMP)" ')           
+                                                                          
+                                                                          
+                                                                          
+         QSH CMD(&CMD5)                                                   
+             MONMSG     MSGID(QSH0005 QSH0006 QSH0007 QSH0002)            
+ CALL ISYSMODOBJ/CORRIDA1                                                 
+                
+                
+ ENDPGM         
+                
+_________________________________________________________________________________________________________
+
+PMEDTAM2:
+
+/*****************************************************************/                                 
+/*   SACA LISTA DE ARCHIVOS MAYORES A 10 GIGABYTES               */                                 
+/*                                                               */                                 
+/*****************************************************************/                                 
+ PGM                                                                                                
+ DCL VAR(&CMD) TYPE(*CHAR) LEN(1024)                                                                
+ DCL VAR(&CMD5) TYPE(*CHAR) LEN(512)                                                                
+             DLTF       FILE(ISYSMODOBJ/MEDTAMF2)                                                   
+             MONMSG     MSGID(CPF2105)                                                              
+ CHGVAR     VAR(&CMD) VALUE('DB2 "CREATE TABLE ISYSMODOBJ.MEDTAMF2 AS +                             
+                          (SELECT SYSTEM_TABLE_SCHEMA, +                                            
+                          SYSTEM_TABLE_NAME, NUMBER_ROWS, +                                         
+                          NUMBER_DELETED_ROWS, LAST_SAVE_TIMESTAMP, +                               
+                          ((DATA_SIZE)/1024/1024/1024) AS +                                         
+                          DATA_SIZE_GB FROM QSYS2.SYSTABLESTAT +                                    
+                          WHERE ((DATA_SIZE)/1024/1024/1024) >10) WITH DATA " ')                    
+       QSH CMD(&CMD)                                                                                
+             MONMSG     MSGID(QSH0005 QSH0006 QSH0007 QSH0002)                                      
+     /*                PONE  UN UPDATE AL CAMPO LAST_SAVE_TIMESTAMP Y LE PONE LA FECHA DEL DIA */   
+     /*                                                                
+     CHGVAR     VAR(&CMD5) VALUE('DB2 "UPDATE +                        
+                  ISYSMODOBJ.MEDTAMF2 SET  +                           
+                  LAST_SAVE_TIMESTAMP = (CURRENT TIMESTAMP)" ')        
+                                                                       
+                                                                       
+                                                                       
+         QSH CMD(&CMD5)                                                
+             MONMSG     MSGID(QSH0005 QSH0006 QSH0007 QSH0002)         
+                                      
+ CALL ISYSMODOBJ/CORRIDA2             
+                                      
+ ENDPGM                               
+_____________________________________________________________________________________________________________
+
+CORRIDA1:
+
+/*****************************************************************/               
+/*                                                               */               
+/*                                                               */               
+/*****************************************************************/               
+DCL VAR(&CMD6) TYPE(*CHAR) LEN(512)                                               
+                                                                                  
+/*                                                               */               
+             RUNQRY     QRY(ISYSMODOBJ/MEDTAM1)                                   
+             /* ACA CORRO EL  QUERY  DE UNION MEDTAM1 Y MEDTAM2 FILES */          
+             /* Y EL QUERY DE DISTINTOS ...PARA LOS NUEVOS FILES      */          
+             /* DISTASP                                               */          
+                                                                                  
+             /* ACA ALIMENTO EL HISTORICO   */                                    
+             CHGVAR     VAR(&CMD6) VALUE('DB2 "INSERT INTO +                      
+                          ISYSMODOBJ.HISTASP  +                                   
+                          (BIBLIOTECA,ARCHIVO,NUM_FILAS,NUM_REG_DEL,D+            
+                          ATE_EXTRAC,SIZE_GB) SELECT +                            
+                          SYSTEM_TABLE_SCHEMA,SYSTEM_TABLE_NAME,NUMBE+            
+                          R_ROWS,NUMBER_DELETED_ROWS,DATE(LAST_SAVE_TIMEST+       
+                          AMP),DATA_SIZE_GB FROM ISYSMODOBJ.MEDTAMF +         
+                          " ')                                                
+                                                                              
+   QSH CMD(&CMD6)                                                             
+       MONMSG     MSGID(QSH0005 QSH0006 QSH0007 QSH0002)                      
+                                                                              
+                                                                              
+     ENDPGM  
+________________________________________________________________________________________________________________
+
+CORRIDA2:
+
+/*****************************************************************/          
+/*                                                               */          
+/*                                                               */          
+/*****************************************************************/          
+             DCL VAR(&CMD6) TYPE(*CHAR) LEN(512)                             
+                                                                             
+                                                                             
+                                                                             
+             /* ACA CORRO EL  QUERY  DE UNION MEDTAM1 Y MEDTAM2 FILES */     
+             /* Y EL QUERY DE DISTINTOS ...PARA LOS NUEVOS FILES      */     
+             /* DISTASP                                               */     
+             RUNQRY     QRY(ISYSMODOBJ/MEDTAM2)                              
+             /* ACA CORRO EL  QUERY  DE UNION MEDTAM1 Y MEDTAM2 FILES */     
+             /* Y EL QUERY DE DISTINTOS ...PARA LOS NUEVOS FILES      */     
+             /* DISTASP                                               */     
+                                                                             
+             RUNQRY     QRY(ISYSMODOBJ/UNIONASP)                             
+             RUNQRY     QRY(ISYSMODOBJ/DISTASP2)                             
+           /* ACA ALIMENTO EL HISTORICO   */                                 
+CHGVAR     VAR(&CMD6) VALUE('DB2 "INSERT INTO +                        
+             ISYSMODOBJ.HISTASP  +                                     
+             (BIBLIOTECA,ARCHIVO,NUM_FILAS,NUM_REG_DEL,D+              
+             ATE_EXTRAC,SIZE_GB) SELECT +                              
+             SYSTEM_TABLE_SCHEMA,SYSTEM_TABLE_NAME,NUMBE+              
+             R_ROWS,NUMBER_DELETED_ROWS,DATE(LAST_SAVE_TIMEST+         
+             AMP),DATA_SIZE_GB FROM ISYSMODOBJ.MEDTAMF2 +              
+             " ')                                                      
+                                                                       
+ QSH CMD(&CMD6)                                        
+     MONMSG     MSGID(QSH0005 QSH0006 QSH0007 QSH0002) 
+                                                       
+       /* ACA ALIMENTO EL HISTORICO  DE UNION  */      
+        RUNQRY QRY(ISYSMODOBJ/UNIONASPHI)              
+     ENDPGM                                            
+____________________________________________________________________________________________________________________
+____________________________________________________________________________________________________________________
+
+QUERYS :
+
+QUERY MEDTAM1:
+
+
+   File . . . . . . . . .   MEDTAMF      
+     Library  . . . . . .     ISYSMODOBJ 
+   Member . . . . . . . .   *FIRST       
+   Format . . . . . . . .   MEDTAMF      
+------------------------------------------------
+
+ Field       Expression                        
+ FECHA       date(lastsave)                    
+                                               
+                                               
+                                               
+                                               
+                                               
+------------------------------------------------
+
+ Seq   Field             Text              
+   10  SYS_DNAME                           
+   20  SYS_TNAME                           
+   30  FECHA             date(lastsave)    
+   40  DATA_00001                          
+       CARD                                
+       DELETED                             
+       LASTSAVE                            
+-------------------------------------------------
+
+                                               
+ Sort                                     
+ Prty A/D  Field           Text           
+   10  A   SYS_DNAME                      
+   20  A   SYS_TNAME                      
+           FECHA           date(lastsave) 
+           DATA_00001                     
+                                          
+------------------------------------------------
+
+   Output type  . . . . . . . . . . .   3  
+                                           
+                                           
+                                           
+   Form of output . . . . . . . . . .   1  
+                                           
+                                           
+   Line wrapping  . . . . . . . . . .   N  
+     Wrapping width . . . . . . . . .      
+     Record on one page . . . . . . .   N  
+-----------------------------------------------
+
+   File . . . . . . . . .   MEDTAMFS1      
+     Library  . . . . . .     ISYSMODOBJ   
+   Member . . . . . . . .   *FILE          
+                                           
+   Data in file . . . . .   2              
+                                           
+                                           
+                                           
+   For a new file:                         
+     Authority  . . . . .   *ALL           
+                                           
+                                           
+-----------------------------------------------
+
+   Use rounding . . . . . . . . . . .   N  
+                                           
+   Ignore decimal                          
+     data errors  . . . . . . . . . .   N  
+                                           
+   Ignore character                        
+     substitution warnings  . . . . .   N  
+                                           
+   Use collating sequence for              
+     all character comparisons  . . .   Y  
+
+----------------------------------------------
+
+                                           
+
+
+
+
+____________________________________________________________________________________________________________________
+
+QUERY MEDTAM2 :
+
+                                                                     
+   File . . . . . . . . .   MEDTAMF2       Name, F4 for list         
+     Library  . . . . . .     ISYSMODOBJ   Name, *LIBL, F4 for list  
+   Member . . . . . . . .   *FIRST         Name, *FIRST, F4 for list 
+   Format . . . . . . . .   MEDTAMF2       Name, *FIRST, F4 for list 
+                                                                     
+-------------------------
+
+                                                                               
+ Field       Expression                         Column Heading        Len   Dec
+ FECHA       date(lastsave)                                                    
+                                                                               
+                                                                               
+-------------------------
+
+ Seq   Field             Text               
+   10  SYS_DNAME                            
+   20  SYS_TNAME                            
+   30  FECHA             date(lastsave)     
+   40  DATA_00001                           
+       CARD                                 
+       DELETED                              
+       LASTSAVE                             
+--------------------------
+
+ Sort                                        
+ Prty A/D  Field           Text              
+   10  A   SYS_DNAME                         
+   20  A   SYS_TNAME                         
+           FECHA           date(lastsave)    
+           DATA_00001                        
+---------------------------
+
+   Output type  . . . . . . . . . . .   3     1=Display          
+                                              2=Printer          
+                                              3=Database file    
+                                                                 
+   Form of output . . . . . . . . . .   1     1=Detail           
+                                              2=Summary only     
+                                                                 
+   Line wrapping  . . . . . . . . . .   N     Y=Yes, N=No        
+     Wrapping width . . . . . . . . .         Blank, 1-378       
+     Record on one page . . . . . . .   N     Y=Yes, N=No        
+
+---------------------------
+
+                                         
+   File . . . . . . . . .   MEDTAMFS2    
+     Library  . . . . . .     ISYSMODOBJ 
+   Member . . . . . . . .   *FILE        
+                                         
+   Data in file . . . . .   2            
+                                         
+                                         
+                                         
+   For a new file:                       
+     Authority  . . . . .   *ALL         
+                                         
+----------------------------
+
+                                             
+   Use rounding . . . . . . . . . . .   N    
+                                             
+   Ignore decimal                            
+     data errors  . . . . . . . . . .   N    
+                                             
+   Ignore character                          
+     substitution warnings  . . . . .   N    
+                                             
+   Use collating sequence for                
+     all character comparisons  . . .   Y    
+
+----------------------------
+----------------------------
+
+QUERY UNIONASP :
+                                                                               
+   File . . . . . . . . .   MEDTAMFS1     
+     Library  . . . . . .     ISYSMODOBJ  
+   Member . . . . . . . .   *FIRST        
+   Format . . . . . . . .   MEDTAMFS1     
+   File ID  . . . . . . .   T01           
+                                          
+   File . . . . . . . . .   MEDTAMFS2     
+     Library  . . . . . .     ISYSMODOBJ  
+   Member . . . . . . . .   *FIRST        
+   Format . . . . . . . .   MEDTAMFS2     
+   File ID  . . . . . . .   T02           
+
+---------------------------
+
+                                     
+   Type of join . . . . . . . .   1  
+                                     
+                                     
+--------------------------
+
+                                             
+ Field             Test     Field            
+ T01.SYS_DNAME     EQ       T02.SYS_DNAME    
+ T01.SYS_TNAME     EQ       T02.SYS_TNAME    
+                                             
+                                             
+                                             
+--------------------------
+
+ Field       Expression                        
+ AUMENT_GB   T02.DATA_00001 - T01.DATA_00001   
+                                               
+                                               
+                                               
+--------------------------
+
+ Seq   Field             Text                             
+   10  T01.SYS_DNAME                                      
+   20  T01.SYS_TNAME                                      
+   30  T01.FECHA         date(lastsave)                   
+   40  T01.DATA_00001                                     
+   50  T02.FECHA         date(lastsave)                   
+   60  T02.DATA_00001                                     
+   70  AUMENT_GB         T02.DATA_00001 - T01.DATA_00001  
+       T02.SYS_DNAME                                      
+       T02.SYS_TNAME                                      
+---------------------------
+
+ Sort                                                       
+ Prty A/D  Field           Text                             
+   10  D   AUMENT_GB       T02.DATA_00001 - T01.DATA_00001  
+           T01.SYS_DNAME                                    
+           T01.SYS_TNAME                                    
+           T01.FECHA       date(lastsave)                   
+           T01.DATA_00001                                   
+           T02.FECHA       date(lastsave)                   
+           T02.DATA_00001                                   
+----------------------------
+
+                                             
+   Output type  . . . . . . . . . . .   3    
+                                             
+                                             
+                                             
+   Form of output . . . . . . . . . .   1    
+                                             
+                                             
+   Line wrapping  . . . . . . . . . .   N    
+     Wrapping width . . . . . . . . .        
+     Record on one page . . . . . . .   N    
+---------------------------
+
+                                          
+   File . . . . . . . . .   UNIONASP      
+     Library  . . . . . .     ISYSMODOBJ  
+   Member . . . . . . . .   *FILE         
+                                          
+   Data in file . . . . .   2             
+                                          
+                                          
+                                          
+   For a new file:                        
+     Authority  . . . . .   *ALL          
+                                          
+                                          
+---------------------------
+
+   Use rounding . . . . . . . . . . .   N  
+                                           
+   Ignore decimal                          
+     data errors  . . . . . . . . . .   N  
+                                           
+   Ignore character                        
+     substitution warnings  . . . . .   N  
+                                           
+   Use collating sequence for              
+     all character comparisons  . . .   Y  
+----------------------------
+----------------------------
+
+QUERY DISTASP2
+
+   File . . . . . . . . .   MEDTAMFS2     
+     Library  . . . . . .     ISYSMODOBJ  
+   Member . . . . . . . .   *FIRST        
+   Format . . . . . . . .   MEDTAMFS2     
+   File ID  . . . . . . .   T01           
+                                          
+   File . . . . . . . . .   MEDTAMFS1     
+     Library  . . . . . .     ISYSMODOBJ  
+   Member . . . . . . . .   *FIRST        
+   Format . . . . . . . .   MEDTAMFS1     
+   File ID  . . . . . . .   T02           
+---------------------------
+
+   Type of join . . . . . . . .   3   
+---------------------------
+
+ Field             Test     Field            
+ T01.SYS_DNAME     EQ       T02.SYS_DNAME    
+ T01.SYS_TNAME     EQ       T02.SYS_TNAME    
+                                             
+                                             
+                                             
+---------------------------
+
+ Seq   Field             Text             
+   10  T01.SYS_DNAME                      
+   20  T01.SYS_TNAME                      
+   30  T01.FECHA         date(lastsave)   
+   40  T01.DATA_00001                     
+       T02.SYS_DNAME                      
+       T02.SYS_TNAME                      
+       T02.FECHA         date(lastsave)   
+       T02.DATA_00001                     
+                                          
+----------------------------
+
+   Output type  . . . . . . . . . . .   3   
+                                            
+                                            
+                                            
+   Form of output . . . . . . . . . .   1   
+                                            
+                                            
+   Line wrapping  . . . . . . . . . .   N   
+     Wrapping width . . . . . . . . .       
+     Record on one page . . . . . . .   N   
+
+----------------------------                                                                               
+
+   File . . . . . . . . .   DISTASP      
+     Library  . . . . . .     ISYSMODOBJ 
+   Member . . . . . . . .   *FILE        
+                                         
+   Data in file . . . . .   2            
+                                         
+                                         
+                                         
+   For a new file:                       
+     Authority  . . . . .   *ALL         
+                                         
+-----------------------------
+
+   Use rounding . . . . . . . . . . .   N   
+                                            
+   Ignore decimal                           
+     data errors  . . . . . . . . . .   N   
+                                            
+   Ignore character                         
+     substitution warnings  . . . . .   N   
+                                            
+   Use collating sequence for               
+     all character comparisons  . . .   Y   
+-----------------------------
+-----------------------------
+
+QUERY :UNIONASPHI
+
+
+   File . . . . . . . . .   UNIONASP    
+     Library  . . . . . .     ISYSMODOBJ
+   Member . . . . . . . .   *FIRST      
+   Format . . . . . . . .   UNIONASP    
+
+-----------------------------
+
+ Seq   Field         
+   10  SYS_DNAME     
+   20  SYS_TNAME     
+   30  FECHA         
+   40  DATA_00001    
+   50  FECHA01       
+   60  DATA_00002    
+   70  AUMENT_GB     
+-----------------------------
+
+   Output type  . . . . . . . . . . .   3    
+                                             
+                                             
+                                             
+   Form of output . . . . . . . . . .   1    
+                                             
+                                             
+   Line wrapping  . . . . . . . . . .   N    
+     Wrapping width . . . . . . . . .        
+     Record on one page . . . . . . .   N    
+
+-----------------------------
+
+   File . . . . . . . . .   UNIONASPHI   
+     Library  . . . . . .     ISYSMODOBJ 
+   Member . . . . . . . .   *FILE        
+                                         
+   Data in file . . . . .   5            
+                                         
+                                         
+                                         
+   For a new file:                       
+     Authority  . . . . .   *ALL         
+                                         
+-----------------------------
+
+   Use rounding . . . . . . . . . . .   N    
+                                             
+   Ignore decimal                            
+     data errors  . . . . . . . . . .   N    
+                                             
+   Ignore character                          
+     substitution warnings  . . . . .   N    
+                                             
+   Use collating sequence for                
+     all character comparisons  . . .   Y    
+-------------------------------
+-------------------------------
+
+      agendarlos de la siguiente manera
+
+job: PMEDTAM1:
+
+   Job  . . . . . . . . . . . . :   PMEDTAM1             
+     User . . . . . . . . . . . :     MSELE              
+     Number . . . . . . . . . . :     337998             
+   Date . . . . . . . . . . . . :   07/25/16             
+   Time . . . . . . . . . . . . :   09:00:00             
+ Schedule day . . . . . . . . . :   *MON  *WED  *FRI     
+ Schedule time  . . . . . . . . :   09:00:00             
+ Frequency  . . . . . . . . . . :   *WEEKLY              
+ Recovery action  . . . . . . . :   *SBMRLS    
+
+ Command  . . . . . . . . . . . :   CALL PGM(ISYSMODOBJ/PMEDTAM1)    
+                                                                     
+                                                                     
+ Job queue  . . . . . . . . . . :   QS36EVOKE                        
+   Library  . . . . . . . . . . :     QGPL                           
+ Job queue status . . . . . . . :   RLS/SBS                          
+ Job description  . . . . . . . :   *USRPRF                          
+   Library  . . . . . . . . . . :                                    
+          
+--------------
+
+JOB: PMEDTAM2: 
+
+   Job  . . . . . . . . . . . . :   PMEDTAM2                   
+     User . . . . . . . . . . . :     MSELE                    
+     Number . . . . . . . . . . :     330593                   
+   Date . . . . . . . . . . . . :   07/23/16                   
+   Time . . . . . . . . . . . . :   09:00:00                   
+ Schedule day . . . . . . . . . :   *TUE  *THU  *SAT           
+ Schedule time  . . . . . . . . :   09:00:00                   
+ Frequency  . . . . . . . . . . :   *WEEKLY                    
+ Recovery action  . . . . . . . :   *SBMRLS                    
+
+ Command  . . . . . . . . . . . :   CALL PGM(ISYSMODOBJ/PMEDTAM2)    
+                                                                     
+                                                                     
+ Job queue  . . . . . . . . . . :   QS36EVOKE                        
+   Library  . . . . . . . . . . :     QGPL                           
+ Job queue status . . . . . . . :   RLS/SBS                          
+ Job description  . . . . . . . :   *USRPRF                          
+   Library  . . . . . . . . . . :                                    
+ __________________________________________________________________________________________________________________________________
+
+Nuevos programas para controlar el tamaño de las bibliotecas y numeros de objetos
+
+Clp: TAMANOPRU1 en isysmodobj
+
+/*****************************************************************/          
+/* LEO TODAS LAS BIBLIOTECAS Y RECUPERO EL TAMAÑO EN GB                 */   
+/* CON LA CANTIDAD DE OBJETOS                                           */   
+/* CREAR ANTES EL FILE TAMANO POR UNICA VEZ CON SQL                     */   
+/* Y EL FILE HISTLIB                                                    */   
+/*                                                                      */   
+/*  CREATE TABLE ISYSMODOBJ/TAMANO (FECHA DATE, BIBLIOT                 */   
+/*  CHAR ( 10), TAMANO_GB BIGINT , CANT_OBJ                             */   
+/*  BIGINT )                                                            */   
+/*                                                                      */   
+/*                                                                      */   
+/*  CREATE TABLE ISYSMODOBJ/HISTLIB (FECHA DATE , BIBLIOT CHAR ( 10),   */   
+/*  TAMANO_GB BIGINT , CANT_OBJ BIGINT , FECHA01 DATE , BIBLIOT01 CHAR  */   
+/*  ( 10), TAMANO_GB1 BIGINT , CANT_OBJ1 BIGINT , INCR_GB BIGINT ,      */   
+/*  INCR_OBJ BIGINT )                                                   */   
+/*                                                                      */   
+/*                                                                      */   
+/*                                                                      */   
+/*                                                                      */   
+/*                                                                      */ 
+/*****************************************************************      */ 
+ PGM                                                                       
+                                                                           
+                                                                           
+    DCL  &LIB     *CHAR LEN(10)                                            
+           DCL  &SIZE    *DEC  LEN(15)                                     
+           DCL  &MBSIZE  *DEC  LEN(9 3)                                    
+           DCL  &MBSIZE_ *CHAR LEN(9)                                      
+           DCL  &MEGA    *DEC  LEN(15) VALUE(1048576)                      
+           DCL VAR(&STR) TYPE(*CHAR) LEN(48)                          
+           DCL VAR(&BIBLIO) TYPE(*CHAR) LEN(20)                       
+           DCL VAR(&BIBLIOX) TYPE(*CHAR) LEN(20)                      
+           DCL VAR(&LENG) TYPE(*CHAR) LEN(4) VALUE(X'00000030')       
+           DCL VAR(&CERR) TYPE(*CHAR) LEN(128)                        
+           DCL VAR(&OPC) TYPE(*CHAR) LEN(8)                           
+           DCL VAR(&TAM1) TYPE(*CHAR) LEN(9)                          
+           DCL VAR(&MUL1) TYPE(*CHAR) LEN(9)                          
+           DCL VAR(&TAM2) TYPE(*DEC) LEN(14 0)                        
+           DCL VAR(&TAM2B) TYPE(*CHAR) LEN(14)                        
+           DCL VAR(&MUL2) TYPE(*DEC) LEN(9 0)        
+           DCL VAR(&TAM3) TYPE(*CHAR) LEN(14)        
+           DCL VAR(&COBJ) TYPE(*CHAR) LEN(14)        
+           DCL VAR(&XMSGID) TYPE(*CHAR) LEN(7)       
+           DCL VAR(&XMSGDT) TYPE(*CHAR) LEN(112)     
+           DCL VAR(&CMD) TYPE(*CHAR) LEN(512)        
+           DCL VAR(&CMD2) TYPE(*CHAR) LEN(8)         
+           DCL VAR(&CMD22) TYPE(*CHAR) LEN(12)       
+           DCL VAR(&CMD3) TYPE(*CHAR) LEN(20)        
+           DCL VAR(&CMD4) TYPE(*DEC) LEN(14)         
+           DCL VAR(&CMD41) TYPE(*DEC) LEN(14 2)  
+           DCL VAR(&MARCA) TYPE(*CHAR) LEN(10)   
+           DCL VAR(&ENTERO) TYPE(*DEC) LEN(14 0) 
+           DCL VAR(&CMD4X) TYPE(*CHAR) LEN(14)   
+           DCL VAR(&CMD4B) TYPE(*DEC) LEN(14 0)  
+           DCL VAR(&CMD4BX) TYPE(*CHAR) LEN(14)  
+           DCL VAR(&CMD5) TYPE(*CHAR) LEN(512)   
+           DCL VAR(&FECHAX) TYPE(*CHAR) LEN(8)   
+           DCL VAR(&DAT1) TYPE(*CHAR) LEN(2)     
+           DCL VAR(&DAT2) TYPE(*CHAR) LEN(2)     
+           DCL VAR(&DAT3) TYPE(*CHAR) LEN(2)                              
+           DCL VAR(&CMD6) TYPE(*CHAR) LEN(512)                            
+           DCLF  ISYSMODOBJ/MIROTAMA                                      
+           CHGJOB     RUNPTY(50) LOG(0 99 *NOLIST)                        
+             CLRPFM     FILE(ISYSMODOBJ/TAMANO)                           
+             DSPOBJD    OBJ(*ALL/*ALL) OBJTYPE(*LIB) +                    
+                          OUTPUT(*OUTFILE) OUTFILE(ISYSMODOBJ/MIROTAMA)   
+        LOOP:                                                             
+        RCVF                                                              
+        MONMSG     MSGID(CPF0864)  EXEC(GOTO CMDLBL(EOF))                 
+             CHGVAR     VAR(&BIBLIO) VALUE(&ODOBNM)                                    
+             CHGVAR     VAR(&FECHAX) VALUE(&ODDDAT)                                    
+       CHGVAR VAR(&CMD22) VALUE('CURRENT DATE')                                        
+       CHGVAR     VAR(&DAT1) VALUE(%SST(&FECHAX 1 2))                                  
+       CHGVAR     VAR(&DAT2) VALUE(%SST(&FECHAX 3 2))                                  
+       CHGVAR     VAR(&DAT3) VALUE(%SST(&FECHAX 5 2))                                  
+       CHGVAR     VAR(&FECHAX) VALUE( &DAT1 *CAT '/' *TCAT &DAT2 *CAT '/' *TCAT &DAT3) 
+       /* OBTIENE TAMAÑO DE BIBLIOTECA */                                              
+       CHGVAR %SST(&CERR 1 8) VALUE(X'0000012800000000')                               
+       CHGVAR &OPC VALUE(X'0000000100000006')                                          
+       CALL QLIRLIBD PARM(&STR &LENG &BIBLIO &OPC &CERR)      
+       MONMSG     MSGID(CPI1129)                              
+       CHGVAR &XMSGID %SST(&CERR 9 7)                         
+       CHGVAR &XMSGDT %SST(&CERR 17 112)                      
+       IF (&XMSGID = ' ') DO /* ERROR EN API */               
+     /* GOTO LOOP   */                                        
+       ENDDO                                                  
+       CHGVAR VAR(&TAM1) VALUE(%BIN(&STR 29 4))               
+       CHGVAR VAR(&MUL1) VALUE(%BIN(&STR 33 4))               
+       CHGVAR VAR(&TAM2) VALUE(&TAM1)                         
+       CHGVAR VAR(&MUL2) VALUE(&MUL1)                      
+       CHGVAR VAR(&TAM2) VALUE(&TAM2*&MUL2)                
+       CHGVAR VAR(&TAM2B) VALUE(&TAM2)                     
+       CHGVAR VAR(&TAM3) VALUE(&TAM2)                      
+       /*                                          */      
+      /* OBTIENE CANTIDAD DE OBJETOS EN BIBLIOTECA */      
+      CHGVAR &OPC VALUE(X'0000000100000007')               
+      MONMSG     MSGID(CPI1129)                            
+      CALL QLIRLIBD PARM(&STR &LENG &BIBLIO &OPC &CERR)    
+      CHGVAR &XMSGID %SST(&CERR 9 7)                       
+      CHGVAR &XMSGDT %SST(&CERR 17 112)                  
+      IF (&XMSGID = ' ') DO /* ERROR EN API */           
+   /* GOTO LOOP   */                                     
+      ENDDO                                              
+      CHGVAR VAR(&TAM1) VALUE(%BIN(&STR 29 4))           
+      CHGVAR VAR(&MUL1) VALUE(%BIN(&STR 33 4))           
+      CHGVAR VAR(&TAM2) VALUE(&TAM1)                     
+      CHGVAR VAR(&MUL2) VALUE(&MUL1)                     
+      CHGVAR VAR(&TAM2) VALUE(&TAM2*&MUL2)               
+      CHGVAR VAR(&ENTERO) VALUE(&TAM1)                   
+      CHGVAR VAR(&COBJ) VALUE(&ENTERO)                                             
+     ADDENVVAR  ENVVAR(QIBM_QSH_CMD_OUTPUT) VALUE(NONE) +                          
+     REPLACE(*YES)                                                                 
+     CHGENVVAR ENVVAR(QIBM_QSH_CMD_ESCAPE_MSG) VALUE(Y)                            
+     MONMSG MSGID(CPFA981) EXEC(DO)                                                
+     ADDENVVAR  ENVVAR(QIBM_QSH_CMD_ESCAPE_MSG) VALUE(Y)                           
+     ENDDO                                                                         
+              CHGVAR     VAR(&CMD) VALUE('DB2 "INSERT INTO +                       
+                           ISYSMODOBJ.TAMANO(FECHA,BIBLIOT,TAMANO_GB,CANT_OBJ) ')  
+      CHGVAR     VAR(&CMD2) VALUE(&FECHAX)                                         
+             CHGVAR     VAR(&BIBLIOX) VALUE(&BIBLIO)           
+                                                               
+      CHGVAR     VAR(&CMD3) VALUE(&BIBLIOX )                   
+      IF       COND(%SST(&CMD3 1 3) *EQ '$$$')  THEN(DO)       
+               CHGVAR   VAR(%SST(&CMD3 1 3))  VALUE('SSS')     
+      ENDDO                                                    
+      IF       COND(%SST(&CMD3 1 2) *EQ '$$')  THEN(DO)        
+               CHGVAR   VAR(%SST(&CMD3 1 2))  VALUE('SS')      
+      ENDDO                                                    
+      IF       COND(%SST(&CMD3 1 1) *EQ '$')  THEN(DO)         
+               CHGVAR   VAR(%SST(&CMD3 1 1))  VALUE('S')            
+      ENDDO                                                         
+      CHGVAR     VAR(&CMD3) VALUE(%TRIM(&CMD3))                     
+      CHGVAR     VAR(&CMD4) VALUE(&TAM2B)                           
+      CHGVAR     VAR(&CMD4B) VALUE(&TAM2)                           
+                                                                    
+      CHGVAR     VAR(&CMD41) VALUE(&CMD4 / 1024)  /* PASO A KB */   
+      CHGVAR     VAR(&CMD41) VALUE(&CMD41 / 1024) /* PASO A MB */   
+      CHGVAR     VAR(&CMD41) VALUE(&CMD41 / 1024) /* PASO A GB */   
+      CHGVAR     VAR(&CMD4X) VALUE(&CMD41)                          
+                                                                                             
+      CHGVAR            (&CMD4BX) VALUE(&ENTERO)                                             
+                                                                                             
+      CHGVAR     VAR(&CMD5) VALUE( &CMD *TCAT ' VALUES(' +                                   
+       *TCAT &CMD22  +                                                                       
+       *TCAT ', ' *TCAT '''' *TCAT &CMD3 +                                                   
+       *TCAT '''' *TCAT ', ' *TCAT     +                                                     
+       '''' *TCAT &CMD4X *TCAT '''' *TCAT ', ' *TCAT '''' *TCAT &CMD4BX *TCAT '''' *TCAT +   
+       ')' *TCAT '"')                                                                        
+        QSH CMD(&CMD5)                                                             
+        MONMSG MSGID(QSH0005 QSH0006 QSH0007 QSH0002)                              
+        MONMSG MSGID(CPI1129)                                                      
+            GOTO LOOP                                                              
+                                                                                   
+         EOF:                                                                      
+                     RUNQRY     QRY(ISYSMODOBJ/LIBTAM2)                            
+                                                                                   
+                    /* ACA ALIMENTO EL HISTORICO   */                              
+                    CHGVAR     VAR(&CMD6) VALUE('DB2 "INSERT INTO +                
+                                 ISYSMODOBJ.HISTLIB  +                                                       
+                                 (FECHA,BIBLIOT,TAMANO_GB,CANT_OBJ,FECHA01,BIBLIOT01,TAMANO_GB1,CANT_OBJ1, + 
+                                 INCR_GB,INCR_OBJ) SELECT +                                                  
+                                 FECHA,BIBLIOT,TAMANO_GB,CANT_OBJ,FECHA01,BIBLIOT01, +                       
+                                 TAMANO_G01,CANT_OBJ01,INCR_GB,INCR_OBJ +                                    
+                                 FROM ISYSMODOBJ.LIBTAM2 +                                                   
+                                 " ')                                                                        
+                                                                                                             
+          QSH CMD(&CMD6)                                                                                     
+              MONMSG     MSGID(QSH0005 QSH0006 QSH0007 QSH0002 QSH0100 QSH2000)                              
+                                 
+                                 
+                 ENDPGM       
+___________________________________________________________________________________
+
+Clp: TAMANOPRU2 en isysmodobj
+   
+/*****************************************************************/          
+/* LEO TODAS LAS BIBLIOTECAS Y RECUPERO EL TAMAÑO EN GB                 */   
+/* CON LA CANTIDAD DE OBJETOS                                           */   
+/* CREAR ANTES EL FILE TAMANO2 POR UNICA VEZ CON SQL                     */  
+/* Y EL FILE HISTLIB                                                    */   
+/*                                                                      */   
+/*  CREATE TABLE ISYSMODOBJ/TAMANO2 (FECHA DATE, BIBLIOT                 */  
+/*  CHAR ( 10), TAMANO_GB BIGINT , CANT_OBJ                             */   
+/*  BIGINT )                                                            */   
+/*                                                                      */   
+/*                                                                      */   
+/*  CREATE TABLE ISYSMODOBJ/HISTLIB (FECHA DATE , BIBLIOT CHAR ( 10),   */   
+/*  TAMANO_GB BIGINT , CANT_OBJ BIGINT , FECHA01 DATE , BIBLIOT01 CHAR  */   
+/*  ( 10), TAMANO_GB1 BIGINT , CANT_OBJ1 BIGINT , INCR_GB BIGINT ,      */   
+/*  INCR_OBJ BIGINT )                                                   */   
+/*                                                                      */   
+/*                                                                      */   
+/*                                                                      */   
+/*                                                                      */   
+/*                                                                      */     
+/*****************************************************************      */     
+ PGM                                                                           
+                                                                               
+                                                                               
+    DCL  &LIB     *CHAR LEN(10)                                                
+           DCL  &SIZE    *DEC  LEN(15)                                         
+           DCL  &MBSIZE  *DEC  LEN(9 3)                                        
+           DCL  &MBSIZE_ *CHAR LEN(9)                                          
+           DCL  &MEGA    *DEC  LEN(15) VALUE(1048576)                          
+           DCL VAR(&STR) TYPE(*CHAR) LEN(48)                         
+           DCL VAR(&BIBLIO) TYPE(*CHAR) LEN(20)                      
+           DCL VAR(&BIBLIOX) TYPE(*CHAR) LEN(20)                     
+           DCL VAR(&LENG) TYPE(*CHAR) LEN(4) VALUE(X'00000030')      
+           DCL VAR(&CERR) TYPE(*CHAR) LEN(128)                       
+           DCL VAR(&OPC) TYPE(*CHAR) LEN(8)                          
+           DCL VAR(&TAM1) TYPE(*CHAR) LEN(9)                         
+           DCL VAR(&MUL1) TYPE(*CHAR) LEN(9)                         
+           DCL VAR(&TAM2) TYPE(*DEC) LEN(14 0)                       
+           DCL VAR(&TAM2B) TYPE(*CHAR) LEN(14)                       
+           DCL VAR(&MUL2) TYPE(*DEC) LEN(9 0)             
+           DCL VAR(&TAM3) TYPE(*CHAR) LEN(14)             
+           DCL VAR(&COBJ) TYPE(*CHAR) LEN(14)             
+           DCL VAR(&XMSGID) TYPE(*CHAR) LEN(7)            
+           DCL VAR(&XMSGDT) TYPE(*CHAR) LEN(112)          
+           DCL VAR(&CMD) TYPE(*CHAR) LEN(512)             
+           DCL VAR(&CMD2) TYPE(*CHAR) LEN(8)              
+           DCL VAR(&CMD22) TYPE(*CHAR) LEN(12)            
+           DCL VAR(&CMD3) TYPE(*CHAR) LEN(20)             
+           DCL VAR(&CMD4) TYPE(*DEC) LEN(14)              
+           DCL VAR(&CMD41) TYPE(*DEC) LEN(14 2)    
+           DCL VAR(&MARCA) TYPE(*CHAR) LEN(10)     
+           DCL VAR(&ENTERO) TYPE(*DEC) LEN(14 0)   
+           DCL VAR(&CMD4X) TYPE(*CHAR) LEN(14)     
+           DCL VAR(&CMD4B) TYPE(*DEC) LEN(14 0)    
+           DCL VAR(&CMD4BX) TYPE(*CHAR) LEN(14)    
+           DCL VAR(&CMD5) TYPE(*CHAR) LEN(512)     
+           DCL VAR(&FECHAX) TYPE(*CHAR) LEN(8)     
+           DCL VAR(&DAT1) TYPE(*CHAR) LEN(2)       
+           DCL VAR(&DAT2) TYPE(*CHAR) LEN(2)       
+           DCL VAR(&DAT3) TYPE(*CHAR) LEN(2)                            
+           DCL VAR(&CMD6) TYPE(*CHAR) LEN(512)                          
+           DCLF  ISYSMODOBJ/MIROTAMA                                    
+           CHGJOB     RUNPTY(50) LOG(0 99 *NOLIST)                      
+             CLRPFM     FILE(ISYSMODOBJ/TAMANO2)                        
+             DSPOBJD    OBJ(*ALL/*ALL) OBJTYPE(*LIB) +                  
+                          OUTPUT(*OUTFILE) OUTFILE(ISYSMODOBJ/MIROTAMA) 
+        LOOP:                                                           
+        RCVF                                                            
+        MONMSG     MSGID(CPF0864)  EXEC(GOTO CMDLBL(EOF))               
+             CHGVAR     VAR(&BIBLIO) VALUE(&ODOBNM)                                       
+             CHGVAR     VAR(&FECHAX) VALUE(&ODDDAT)                                       
+       CHGVAR VAR(&CMD22) VALUE('CURRENT DATE')                                           
+       CHGVAR     VAR(&DAT1) VALUE(%SST(&FECHAX 1 2))                                     
+       CHGVAR     VAR(&DAT2) VALUE(%SST(&FECHAX 3 2))                                     
+       CHGVAR     VAR(&DAT3) VALUE(%SST(&FECHAX 5 2))                                     
+       CHGVAR     VAR(&FECHAX) VALUE( &DAT1 *CAT '/' *TCAT &DAT2 *CAT '/' *TCAT &DAT3)    
+       /* OBTIENE TAMAÑO DE BIBLIOTECA */                                                 
+       CHGVAR %SST(&CERR 1 8) VALUE(X'0000012800000000')                                  
+       CHGVAR &OPC VALUE(X'0000000100000006')                                             
+       CALL QLIRLIBD PARM(&STR &LENG &BIBLIO &OPC &CERR)      
+       MONMSG     MSGID(CPI1129)                              
+       CHGVAR &XMSGID %SST(&CERR 9 7)                         
+       CHGVAR &XMSGDT %SST(&CERR 17 112)                      
+       IF (&XMSGID = ' ') DO /* ERROR EN API */               
+     /* GOTO LOOP   */                                        
+       ENDDO                                                  
+       CHGVAR VAR(&TAM1) VALUE(%BIN(&STR 29 4))               
+       CHGVAR VAR(&MUL1) VALUE(%BIN(&STR 33 4))               
+       CHGVAR VAR(&TAM2) VALUE(&TAM1)                         
+       CHGVAR VAR(&MUL2) VALUE(&MUL1)                        
+       CHGVAR VAR(&TAM2) VALUE(&TAM2*&MUL2)                  
+       CHGVAR VAR(&TAM2B) VALUE(&TAM2)                       
+       CHGVAR VAR(&TAM3) VALUE(&TAM2)                        
+       /*                                          */        
+      /* OBTIENE CANTIDAD DE OBJETOS EN BIBLIOTECA */        
+      CHGVAR &OPC VALUE(X'0000000100000007')                 
+      MONMSG     MSGID(CPI1129)                              
+      CALL QLIRLIBD PARM(&STR &LENG &BIBLIO &OPC &CERR)      
+      CHGVAR &XMSGID %SST(&CERR 9 7)                         
+      CHGVAR &XMSGDT %SST(&CERR 17 112)                     
+      IF (&XMSGID = ' ') DO /* ERROR EN API */              
+   /* GOTO LOOP   */                                        
+      ENDDO                                                 
+      CHGVAR VAR(&TAM1) VALUE(%BIN(&STR 29 4))              
+      CHGVAR VAR(&MUL1) VALUE(%BIN(&STR 33 4))              
+      CHGVAR VAR(&TAM2) VALUE(&TAM1)                        
+      CHGVAR VAR(&MUL2) VALUE(&MUL1)                        
+      CHGVAR VAR(&TAM2) VALUE(&TAM2*&MUL2)                  
+      CHGVAR VAR(&ENTERO) VALUE(&TAM1)                      
+      CHGVAR VAR(&COBJ) VALUE(&ENTERO)                                                 
+     ADDENVVAR  ENVVAR(QIBM_QSH_CMD_OUTPUT) VALUE(NONE) +                              
+     REPLACE(*YES)                                                                     
+     CHGENVVAR ENVVAR(QIBM_QSH_CMD_ESCAPE_MSG) VALUE(Y)                                
+     MONMSG MSGID(CPFA981) EXEC(DO)                                                    
+     ADDENVVAR  ENVVAR(QIBM_QSH_CMD_ESCAPE_MSG) VALUE(Y)                               
+     ENDDO                                                                             
+              CHGVAR     VAR(&CMD) VALUE('DB2 "INSERT INTO +                           
+                           ISYSMODOBJ.TAMANO2(FECHA,BIBLIOT,TAMANO_GB,CANT_OBJ) ')     
+      CHGVAR     VAR(&CMD2) VALUE(&FECHAX)                                             
+             CHGVAR     VAR(&BIBLIOX) VALUE(&BIBLIO)            
+                                                                
+      CHGVAR     VAR(&CMD3) VALUE(&BIBLIOX )                    
+      IF       COND(%SST(&CMD3 1 3) *EQ '$$$')  THEN(DO)        
+               CHGVAR   VAR(%SST(&CMD3 1 3))  VALUE('SSS')      
+      ENDDO                                                     
+      IF       COND(%SST(&CMD3 1 2) *EQ '$$')  THEN(DO)         
+               CHGVAR   VAR(%SST(&CMD3 1 2))  VALUE('SS')       
+      ENDDO                                                     
+      IF       COND(%SST(&CMD3 1 1) *EQ '$')  THEN(DO)          
+               CHGVAR   VAR(%SST(&CMD3 1 1))  VALUE('S')         
+      ENDDO                                                      
+      CHGVAR     VAR(&CMD3) VALUE(%TRIM(&CMD3))                  
+      CHGVAR     VAR(&CMD4) VALUE(&TAM2B)                        
+      CHGVAR     VAR(&CMD4B) VALUE(&TAM2)                        
+                                                                 
+      CHGVAR     VAR(&CMD41) VALUE(&CMD4 / 1024)  /* PASO A KB */
+      CHGVAR     VAR(&CMD41) VALUE(&CMD41 / 1024) /* PASO A MB */
+      CHGVAR     VAR(&CMD41) VALUE(&CMD41 / 1024) /* PASO A GB */
+      CHGVAR     VAR(&CMD4X) VALUE(&CMD41)                       
+                                                                                                
+      CHGVAR            (&CMD4BX) VALUE(&ENTERO)                                                
+                                                                                                
+      CHGVAR     VAR(&CMD5) VALUE( &CMD *TCAT ' VALUES(' +                                      
+       *TCAT &CMD22  +                                                                          
+       *TCAT ', ' *TCAT '''' *TCAT &CMD3 +                                                      
+       *TCAT '''' *TCAT ', ' *TCAT     +                                                        
+       '''' *TCAT &CMD4X *TCAT '''' *TCAT ', ' *TCAT '''' *TCAT &CMD4BX *TCAT '''' *TCAT +      
+       ')' *TCAT '"')                                                                           
+                                                                                                
+        QSH CMD(&CMD5)                                                             
+        MONMSG MSGID(QSH0005 QSH0006 QSH0007 QSH0002)                              
+        MONMSG MSGID(CPI1129)                                                      
+            GOTO LOOP                                                              
+                                                                                   
+         EOF:                                                                      
+                     RUNQRY     QRY(ISYSMODOBJ/LIBTAM1)                            
+                                                                                   
+                    /* ACA ALIMENTO EL HISTORICO   */                              
+                    CHGVAR     VAR(&CMD6) VALUE('DB2 "INSERT INTO +                
+                                 ISYSMODOBJ.HISTLIB  +                                                      
+                                 (FECHA,BIBLIOT,TAMANO_GB,CANT_OBJ,FECHA01,BIBLIOT01,TAMANO_GB1,CANT_OBJ1, +
+                                 INCR_GB,INCR_OBJ) SELECT +                                                 
+                                 FECHA,BIBLIOT,TAMANO_GB,CANT_OBJ,FECHA01,BIBLIOT01, +                      
+                                 TAMANO_G01,CANT_OBJ01,INCR_GB,INCR_OBJ +                                   
+                                 FROM ISYSMODOBJ.LIBTAM1 +                                                  
+                                 " ')                                                                       
+                                                                                                            
+          QSH CMD(&CMD6)                                                                                    
+              MONMSG     MSGID(QSH0005 QSH0006 QSH0007 QSH0002 QSH0100 QSH2000)                             
+                                  
+                                  
+                 ENDPGM           
+________________________________________________________________________________________________________________
+
+ojo cuando la maquina es en castellano poner estas lineas debajo de la siguiente line en ambos clp(tamanopru y tamanopru2)
+
+CHGVAR     VAR(&CMD4X) VALUE(&CMD41)
+
+
+/*  ESTE CAMBIO SE HACE PORQUE NO HACE EL INPUT CUANDO TIENE , */ 
+/*  ENTONCES LE CAMBIO LA COMA X UN PUNTO .                    */ 
+         CHGVAR   VAR(%SST(&CMD4X 12 1))  VALUE('.')              
+/*                            */                                  
+
+
+
+__________________________________________________________________________________________________________________                                                                      
+querys de control Libreria
+
+query : LIBTAM1
+
+                                                                   
+ File . . . . . . . . .   TAMANO         Name, F4 for list         
+   Library  . . . . . .     ISYSMODOBJ   Name, *LIBL, F4 for list  
+ Member . . . . . . . .   *FIRST         Name, *FIRST, F4 for list 
+ Format . . . . . . . .   TAMANO         Name, *FIRST, F4 for list 
+ File ID  . . . . . . .   T01            A-Z99, *ID                
+                                                                   
+ File . . . . . . . . .   TAMANO2        Name, F4 for list         
+   Library  . . . . . .     ISYSMODOBJ   Name, *LIBL, F4 for list  
+ Member . . . . . . . .   *FIRST         Name, *FIRST, F4 for list 
+ Format . . . . . . . .   TAMANO2        Name, *FIRST, F4 for list 
+ File ID  . . . . . . .   T02            A-Z99, *ID                
+                                                                   
+                                                                   
+                                                                   
+-------------------------
+
+                                                                              
+ Type of join . . . . . . . .   1      1=Matched records                      
+                                       2=Matched records with primary file    
+                                       3=Unmatched records with primary file  
+                                                                              
+                                                                              
+                                                                              
+                                                                              
+-------------------------
+
+                                                                 
+ Type comparisons to show how file selections are related, press 
+   Tests:  EQ, NE, LE, GE, LT, GT                                
+                                                                 
+ Field             Test     Field                                
+ T01.BIBLIOT       EQ       T02.BIBLIOT                          
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+----------------------------
+
+                                                                               
+ Type definitions using field names or constants and operators, press Enter.   
+   Operators:  +, -, *, /, SUBSTR, ||, DATE...                                 
+                                                                               
+ Field       Expression                         Column Heading        Len   Dec
+ INCR_GB     T02.TAMANO_GB - T01.TAMANO_GB                                     
+                                                                               
+                                                                               
+                                                                               
+ INCR_OBJ    T02.CANT_OBJ  - T01.CANT_OBJ                                      
+                                                                               
+                                                                               
+                                                                        Bottom 
+
+------------------------------
+
+ Type sequence number (0-9999) for the names of up to 500 fields to            
+   appear in the report, press Enter.                                          
+                                                                               
+ Seq   Field             Text                                          Len  Dec
+   10  T01.FECHA                                                        10   L 
+   20  T01.BIBLIOT                                                      10     
+   30  T01.TAMANO_GB                                                    18    0
+   40  T01.CANT_OBJ                                                     18    0
+   50  T02.FECHA                                                        10   L 
+   60  T02.BIBLIOT                                                      10     
+   70  T02.TAMANO_GB                                                    18    0
+   80  T02.CANT_OBJ                                                     18    0
+   90  INCR_GB           T02.TAMANO_GB - T01.TAMANO_GB                  18    0
+  100  INCR_OBJ          T02.CANT_OBJ  - T01.CANT_OBJ                   18    0
+                                                                               
+                                                                               
+------------------------------
+
+                                                                  
+ Type comparisons, press Enter.  Specify OR to start each new grou
+   Tests:  EQ, NE, LE, GE, LT, GT, RANGE, LIST, LIKE, IS, ISNOT...
+                                                                  
+ AND/OR  Field             Test   Value (Field, Number, 'Character
+         INCR_GB           GT     0                               
+                                                                  
+                                                                  
+                                                                  
+                                                                  
+                                                                  
+                                                                  
+-----------------------------
+
+                                                                  
+ Type choices, press Enter.                                       
+                                                                  
+   Output type  . . . . . . . . . . .   3     1=Display           
+                                              2=Printer           
+                                              3=Database file     
+                                                                  
+   Form of output . . . . . . . . . .   1     1=Detail            
+                                              2=Summary only      
+                                                                  
+   Line wrapping  . . . . . . . . . .   N     Y=Yes, N=No         
+     Wrapping width . . . . . . . . .         Blank, 1-378        
+     Record on one page . . . . . . .   N     Y=Yes, N=No         
+                                                                  
+                                                                  
+----------------------------
+
+                                                                          
+ Type choices, press Enter.                                               
+   (The printed definition shows the output file record layout.)          
+                                                                          
+   File . . . . . . . . .   LIBTAM1        Name, F4 for list              
+     Library  . . . . . .     ISYSMODOBJ   Name, F4 for list              
+   Member . . . . . . . .   *FILE          Name, *FIRST, *FILE, *ALL,     
+                                           F4 for list                    
+   Data in file . . . . .   2              1=New file, 2=Replace file     
+                                           3=New member, 4=Replace member 
+                                           5=Add to member                
+                                                                          
+   For a new file:                                                        
+     Authority  . . . . .   *ALL           *LIBCRTAUT, authorization list 
+                                           *CHANGE, *ALL, *EXCLUDE, *USE  
+                                                                          
+                                                                          
+     Text . . . . . . . .                                                 
+   Print definition . . .   N              Y=Yes, N=No                    
+                                                                          
+----------------------------------
+----------------------------------
+
+qUERY LIBTAM2
+
+ Type choices, press Enter.  Press F9 to specify an additional        
+   file selection.                                                    
+                                                                      
+   File . . . . . . . . .   TAMANO2        Name, F4 for list          
+     Library  . . . . . .     ISYSMODOBJ   Name, *LIBL, F4 for list   
+   Member . . . . . . . .   *FIRST         Name, *FIRST, F4 for list  
+   Format . . . . . . . .   TAMANO2        Name, *FIRST, F4 for list  
+   File ID  . . . . . . .   T01            A-Z99, *ID                 
+                                                                      
+   File . . . . . . . . .   TAMANO         Name, F4 for list          
+     Library  . . . . . .     ISYSMODOBJ   Name, *LIBL, F4 for list   
+   Member . . . . . . . .   *FIRST         Name, *FIRST, F4 for list  
+   Format . . . . . . . .   TAMANO         Name, *FIRST, F4 for list  
+   File ID  . . . . . . .   T02            A-Z99, *ID                 
+                                                                      
+-------------------------------
+
+                                                                               
+  Type of join . . . . . . . .   1      1=Matched records                      
+                                        2=Matched records with primary file    
+                                        3=Unmatched records with primary file  
+                                                                               
+                                                                               
+---------------------------------
+
+ Type comparisons to show how file selections are related, press
+   Tests:  EQ, NE, LE, GE, LT, GT                               
+                                                                
+ Field             Test     Field                               
+ T01.BIBLIOT       EQ       T02.BIBLIOT                         
+                                                                
+                                                                
+                                                                
+                                                                
+                                                                
+                                                                
+---------------------------------
+
+                                                                               
+ Type definitions using field names or constants and operators, press Enter.   
+   Operators:  +, -, *, /, SUBSTR, ||, DATE...                                 
+                                                                               
+ Field       Expression                         Column Heading        Len   Dec
+ INCR_GB     T02.TAMANO_GB - T01.TAMANO_GB                                     
+                                                                               
+                                                                               
+                                                                               
+ INCR_OBJ    T02.CANT_OBJ  - T01.CANT_OBJ                                      
+                                                                               
+                                                                               
+                                                                        Bottom 
+                                                                               
+---------------------------------
+
+ Type sequence number (0-9999) for the names of up to 500 fields to             
+   appear in the report, press Enter.                                           
+                                                                                
+ Seq   Field             Text                                          Len  Dec 
+   10  T01.FECHA                                                        10   L  
+   20  T01.BIBLIOT                                                      10      
+   30  T01.TAMANO_GB                                                    18    0 
+   40  T01.CANT_OBJ                                                     18    0 
+   50  T02.FECHA                                                        10   L  
+   60  T02.BIBLIOT                                                      10      
+   70  T02.TAMANO_GB                                                    18    0 
+   80  T02.CANT_OBJ                                                     18    0 
+   90  INCR_GB           T02.TAMANO_GB - T01.TAMANO_GB                  18    0 
+  100  INCR_OBJ          T02.CANT_OBJ  - T01.CANT_OBJ                   18    0 
+                                                                                
+--------------------------------
+
+ Type comparisons, press Enter.  Specify OR to start each new group. 
+   Tests:  EQ, NE, LE, GE, LT, GT, RANGE, LIST, LIKE, IS, ISNOT...   
+                                                                     
+ AND/OR  Field             Test   Value (Field, Number, 'Characters',
+         INCR_GB           GT     0                                  
+                                                                     
+                                                                     
+                                                                     
+                                                                     
+                                                                     
+                                                                     
+-------------------------------
+
+Type choices, press Enter.                                    
+                                                              
+  Output type  . . . . . . . . . . .   3     1=Display        
+                                             2=Printer        
+                                             3=Database file  
+                                                              
+  Form of output . . . . . . . . . .   1     1=Detail         
+                                             2=Summary only   
+                                                              
+  Line wrapping  . . . . . . . . . .   N     Y=Yes, N=No      
+    Wrapping width . . . . . . . . .         Blank, 1-378     
+    Record on one page . . . . . . .   N     Y=Yes, N=No      
+                                                              
+                                                              
+------------------------------
+
+ Type choices, press Enter.                                             
+   (The printed definition shows the output file record layout.)        
+                                                                        
+   File . . . . . . . . .   LIBTAM2        Name, F4 for list            
+     Library  . . . . . .     ISYSMODOBJ   Name, F4 for list            
+   Member . . . . . . . .   *FILE          Name, *FIRST, *FILE, *ALL,   
+                                           F4 for list                  
+   Data in file . . . . .   2              1=New file, 2=Replace file   
+                                           3=New member, 4=Replace membe
+                                           5=Add to member              
+                                                                        
+   For a new file:                                                      
+     Authority  . . . . .   *ALL           *LIBCRTAUT, authorization lis
+                                           *CHANGE, *ALL, *EXCLUDE, *USE
+                                                                        
+                                                                        
+     Text . . . . . . . .                                               
+   Print definition . . .   N              Y=Yes, N=No                  
+                                                                        
+--------------------------------
+

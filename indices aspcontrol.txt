@@ -1,0 +1,13 @@
+para crear indices
+
+SELECT system_table_schema as Library, system_table_name as Archivo, Fecha, Data_size_GB, Fecha01, Data_siz0001, Aument_GB FROM isysmodobj.unionasphi where aument_gb >0 and  fecha >= '2016-06-01' AND fecha <='2016-08-01'
+
+SELECT system_table_schema as Library, system_table_name as Archivo, Fecha, Data_size_GB, Fecha01, Data_siz0001, Aument_GB FROM isysmodobj.unionasphi where   fecha = '2016-07-01'  ORDER BY DATA_SIZ0001 desc, system_table_schema, system_table_name
+
+SELECT BIBLIOTECA, ARCHIVO, NUM_FILAS, NUM_REG_DEL, DATE_EXTRAC, SIZE_GB, int(NUM_FILAS*SIZE_GB/(NUM_FILAS+NUM_REG_DEL)) AS SI_REORG_GB, int(SIZE_GB-(NUM_FILAS*SIZE_GB/(NUM_FILAS+NUM_REG_DEL))) AS RECUPERO_GB  FROM isysmodobj.histasp  where num_reg_del >1 and SIZE_GB-(NUM_FILAS*SIZE_GB/(NUM_FILAS+NUM_REG_DEL)) > 1 and  date_extrac = '2016-07-20'  order by num_reg_del desc fetch first 20 rows only
+
+SELECT * FROM isysmodobj.histasp where num_filas >0 and  date_extrac = '2016-07-01'  order by num_filas desc fetch first 20 rows only
+
+SELECT biblioteca, archivo, num_filas, num_reg_del, date_extrac, size_gb FROM isysmodobj.histasp where biblioteca= 'pirulo' AND archivo ='pirulo' and  date_extrac >= '2016-07-20' AND date_extrac <='2016-08-01'  order by date_extrac desc
+
+SELECT system_table_schema as Library, system_table_name as ARCHIVO, Fecha, Data_size_GB, Fecha01, Data_siz0001 as Data_size_GB_2 , Aument_GB  FROM isysmodobj.unionasphi where system_table_schema= 'pirulo' AND system_table_name ='pirulo' and  fecha >= '2016-06-20' AND fecha <='2016-07-09' order by fecha desc 

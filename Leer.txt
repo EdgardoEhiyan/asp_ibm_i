@@ -1,0 +1,13 @@
+para que el programa en .Net pueda correr sin problemas
+en la PC debera tener instalado el Frameworkde .Net 4 client profile (x86 y x64)
+tambien en la pc debera tener instalado el IBM i Access para windows 
+la version ideal es la v7r1 *que esta en mi pc en c:\v7r1 
+o instalarla desde aca en la carpeta inst_v7r1
+luego instalar (sino funciona la exportacion a excel) el isnt_office 2010 o 2007
+
+
+
+crear la carpeta as400sql en el c:\
+
+en los iSeries a instalar los CLP deberan crear una biblioteca lamada ISYSMODOBJ
+
